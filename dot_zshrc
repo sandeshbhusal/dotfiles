@@ -1,0 +1,20 @@
+# history
+HISTFILE=~/.zsh_history; HISTSIZE=50000; SAVEHIST=50000
+setopt share_history hist_ignore_all_dups inc_append_history
+
+# completion
+autoload -Uz compinit && compinit
+zstyle ':completion:*' menu select
+
+# plugins (cloned by run_onchange script)
+PLUGDIR="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins"
+source "$PLUGDIR/zsh-autosuggestions/zsh-autosuggestions.zsh" 2>/dev/null
+source "$PLUGDIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" 2>/dev/null
+
+# fzf
+export PATH="$HOME/.fzf/bin:$PATH"
+command -v fzf >/dev/null && eval "$(fzf --zsh)"
+
+# prompt
+eval "$(starship init zsh)"
+

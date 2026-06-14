@@ -1,0 +1,49 @@
+#!/bin/sh
+set -e
+
+{{ if ne .chezmoi.osRelease.id "nixos" -}}
+# ---- OS packages (non-NixOS) ----
+{{ if eq .chezmoi.osRelease.id "fedora" -}}
+sudo dnf install -y zsh ripgrep fd-find bat git unzip curl tar fontconfig
+{{ else if eq .chezmoi.osRelease.id "ubuntu" -}}
+sudo apt-get update
+sudo apt-get install -y zsh ripgrep fd-find bat git unzip curl tar fontconfig
+{{ end -}}
+
+# starship (official installer — repo versions lag)
+command -v starship >/dev/null || curl -sS https://starship.rs/install.sh | sh -s -- -y
+
+# ---- fzf from git (prebuilt binary, non-NixOS) ----
+if [ -d "$HOME/.fzf" ]; then
+  git -C "$HOME/.fzf" pull --quiet
+else
+  git clone --depth 1 https://github.com/junegunn/fzf.git "$HOME/.fzf"
+fi
+"$HOME/.fzf/install" --bin   # --bin = binary only, won't touch your .zshrc
+{{ else -}}
+echo "NixOS: zsh/fzf/ripgrep/starship belong in configuration.nix — skipping imperative install."
+{{ end -}}
+
+# ---- zsh plugins (all platforms) ----
+PLUGDIR="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins"
+mkdir -p "$PLUGDIR"
+clone() {
+  d="$PLUGDIR/$(basename "$1")"
+  if [ -d "$d" ]; then git -C "$d" pull --quiet
+  else git clone --depth 1 --quiet "$1" "$d"; fi
+}
+clone https://github.com/zsh-users/zsh-autosuggestions
+clone https://github.com/zsh-users/zsh-syntax-highlighting
+
+# ---- font (all platforms) ----
+if ! fc-list | grep -qi "Google Sans Code"; then
+  DEST="$HOME/.local/share/fonts/google-sans-code"
+  mkdir -p "$DEST"
+  tmp=$(mktemp -d)
+  url=$(curl -fsSL https://api.github.com/repos/googlefonts/googlesans-code/releases/latest \
+    | grep -o 'https://[^"]*\.zip' | head -1)
+  curl -fsSL "$url" -o "$tmp/font.zip"
+  unzip -joq "$tmp/font.zip" '*.ttf' -d "$DEST"
+  fc-cache -f "$DEST" >/dev/null
+  rm -rf "$tmp"
+fi
